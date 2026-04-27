@@ -1,0 +1,8 @@
+*.xlsx
+*.html
+*.csv
+
+Data_CancerRx_Predictor/
+
+!Data_CancerRx_Predictor_CLEAN_DATA/gdsc1_classification.csv
+!Data_CancerRx_Predictor_CLEAN_DATA/gdsc1_regression.csv
