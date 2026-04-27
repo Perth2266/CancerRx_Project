@@ -173,6 +173,7 @@ elif page == "Data Explorer":
     fig, ax = plt.subplots()
     if task == "Classification":
         df[target_col].value_counts().plot.bar(ax=ax, color=["steelblue", "coral"])
+        ax.set_xticks([0, 1])
         ax.set_xticklabels(["Resistant (0)", "Sensitive (1)"], rotation=0)
         ax.set_ylabel("")
         ax.set_xlabel("")
@@ -184,14 +185,19 @@ elif page == "Data Explorer":
         ax.set_title("Distribution of LN_IC50 Values")
     st.pyplot(fig)
 
-    # 2. Box Plot
+    # 2. Box Plot — FutureWarning fixed: use hue instead of palette directly
     st.markdown("**2. Box Plot**")
     if task == "Classification":
         fig, ax = plt.subplots()
         temp_df = cls_df.copy()
-        temp_df["LN_IC50"] = reg_df["LN_IC50"]
-        sns.boxplot(x="SENSITIVE", y="LN_IC50", data=temp_df, ax=ax, palette=["coral", "steelblue"])
-        ax.set_xticklabels(["Resistant (0)", "Sensitive (1)"])
+        temp_df["LN_IC50"]   = reg_df["LN_IC50"]
+        temp_df["Sensitive"] = temp_df["SENSITIVE"].map({0: "Resistant (0)", 1: "Sensitive (1)"})
+        sns.boxplot(
+            x="Sensitive", y="LN_IC50", hue="Sensitive",
+            data=temp_df, ax=ax,
+            palette={"Resistant (0)": "coral", "Sensitive (1)": "steelblue"},
+            legend=False
+        )
         ax.set_title("LN_IC50 Distribution: Sensitive vs Resistant")
         ax.set_xlabel("")
         ax.set_ylabel("LN_IC50")
@@ -237,7 +243,11 @@ elif page == "Data Explorer":
         plt.xticks(rotation=0)
     else:
         fig, ax = plt.subplots(figsize=(8, 4))
-        sns.boxplot(x="Growth Properties", y="LN_IC50", data=df, ax=ax, palette="Set2")
+        sns.boxplot(
+            x="Growth Properties", y="LN_IC50",
+            hue="Growth Properties", data=df, ax=ax,
+            palette="Set2", legend=False
+        )
         ax.set_title("LN_IC50 Distribution by Growth Properties")
         ax.set_xlabel("")
         ax.set_ylabel("")
@@ -260,7 +270,11 @@ elif page == "Data Explorer":
         plt.xticks(rotation=45, ha="right")
     else:
         fig, ax = plt.subplots(figsize=(10, 4))
-        sns.boxplot(x=chosen_cat, y="LN_IC50", data=df_top, ax=ax, palette="Set2")
+        sns.boxplot(
+            x=chosen_cat, y="LN_IC50",
+            hue=chosen_cat, data=df_top, ax=ax,
+            palette="Set2", legend=False
+        )
         ax.set_title(f"LN_IC50 by {chosen_cat}")
         ax.set_xlabel("")
         plt.xticks(rotation=45, ha="right")
