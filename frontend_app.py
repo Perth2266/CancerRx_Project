@@ -21,27 +21,30 @@ def load_data():
     reg_df = pd.read_csv(os.path.join(DATA_PATH, "gdsc1_regression.csv"))
     return cls_df, reg_df
 
-# LOAD MODELS
+# LAZY LOAD MODELS — only loaded when actually needed
 @st.cache_resource
-def load_classification_models():
-    return {
-        "Random Forest Classification": joblib.load(os.path.join(CLS_PATH, "cancer_RFC_classification_model.pkl")),
-        "KNN":                          joblib.load(os.path.join(CLS_PATH, "cls_knn.pkl")),
-        "Logistic Regression":          joblib.load(os.path.join(CLS_PATH, "cls_logistic.pkl")),
-        "SVM":                          joblib.load(os.path.join(CLS_PATH, "cls_svm.pkl")),
+def load_cls_model(name):
+    paths = {
+        "Random Forest Classification": os.path.join(CLS_PATH, "cancer_RFC_classification_model.pkl"),
+        "KNN":                          os.path.join(CLS_PATH, "cls_knn.pkl"),
+        "Logistic Regression":          os.path.join(CLS_PATH, "cls_logistic.pkl"),
+        "SVM":                          os.path.join(CLS_PATH, "cls_svm.pkl"),
     }
+    return joblib.load(paths[name])
 
 @st.cache_resource
-def load_regression_models():
-    return {
-        "Random Forest Regression": joblib.load(os.path.join(REG_PATH, "cancer_RFC_regression_model.pkl")),
-        "KNN":                      joblib.load(os.path.join(REG_PATH, "reg_knn.pkl")),
-        "Linear Regression":        joblib.load(os.path.join(REG_PATH, "reg_linear.pkl")),
+def load_reg_model(name):
+    paths = {
+        "Random Forest Regression": os.path.join(REG_PATH, "cancer_RFC_regression_model.pkl"),
+        "KNN":                      os.path.join(REG_PATH, "reg_knn.pkl"),
+        "Linear Regression":        os.path.join(REG_PATH, "reg_linear.pkl"),
     }
+    return joblib.load(paths[name])
+
+CLS_MODEL_NAMES = ["Random Forest Classification", "KNN", "Logistic Regression", "SVM"]
+REG_MODEL_NAMES = ["Random Forest Regression", "KNN", "Linear Regression"]
 
 cls_df, reg_df = load_data()
-cls_models     = load_classification_models()
-reg_models     = load_regression_models()
 
 # NOMINAL COLUMNS
 nominal_columns = [
@@ -185,7 +188,7 @@ elif page == "Data Explorer":
         ax.set_title("Distribution of LN_IC50 Values")
     st.pyplot(fig)
 
-    # 2. Box Plot — FutureWarning fixed: use hue instead of palette directly
+    # 2. Box Plot
     st.markdown("**2. Box Plot**")
     if task == "Classification":
         fig, ax = plt.subplots()
@@ -292,17 +295,19 @@ elif page == "Model Comparison":
         from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
 
         X_test, y_test = get_cls_splits()
-
         results = []
-        for name, model in cls_models.items():
-            y_pred = model.predict(X_test)
-            acc    = round(accuracy_score(y_test, y_pred), 4)
-            recall = round(recall_score(y_test, y_pred), 4)
-            try:
-                auc = round(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]), 4)
-            except:
-                auc = "N/A"
-            results.append({"Model": name, "Accuracy": acc, "Recall": recall, "ROC AUC": auc})
+
+        for name in CLS_MODEL_NAMES:
+            with st.spinner(f"Evaluating {name}..."):
+                model  = load_cls_model(name)
+                y_pred = model.predict(X_test)
+                acc    = round(accuracy_score(y_test, y_pred), 4)
+                recall = round(recall_score(y_test, y_pred), 4)
+                try:
+                    auc = round(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]), 4)
+                except:
+                    auc = "N/A"
+                results.append({"Model": name, "Accuracy": acc, "Recall": recall, "ROC AUC": auc})
 
         results_df = pd.DataFrame(results).sort_values("Recall", ascending=False)
         st.dataframe(results_df)
@@ -320,13 +325,15 @@ elif page == "Model Comparison":
         from sklearn.metrics import mean_squared_error, r2_score
 
         X_test, y_test = get_reg_splits()
-
         results = []
-        for name, model in reg_models.items():
-            y_pred = model.predict(X_test)
-            mse    = round(mean_squared_error(y_test, y_pred), 4)
-            r2     = round(r2_score(y_test, y_pred), 4)
-            results.append({"Model": name, "MSE": mse, "R²": r2})
+
+        for name in REG_MODEL_NAMES:
+            with st.spinner(f"Evaluating {name}..."):
+                model  = load_reg_model(name)
+                y_pred = model.predict(X_test)
+                mse    = round(mean_squared_error(y_test, y_pred), 4)
+                r2     = round(r2_score(y_test, y_pred), 4)
+                results.append({"Model": name, "MSE": mse, "R²": r2})
 
         results_df = pd.DataFrame(results).sort_values("R²", ascending=False)
         st.dataframe(results_df)
@@ -347,9 +354,8 @@ elif page == "Prediction":
     st.title("Prediction")
 
     task       = st.radio("Task", ["Classification", "Regression"], horizontal=True)
-    models     = cls_models if task == "Classification" else reg_models
-    model_name = st.selectbox("Choose Model", list(models.keys()))
-    model      = models[model_name]
+    model_names = CLS_MODEL_NAMES if task == "Classification" else REG_MODEL_NAMES
+    model_name  = st.selectbox("Choose Model", model_names)
 
     st.subheader("Enter Input Features")
 
@@ -382,23 +388,28 @@ elif page == "Prediction":
     clicked = st.button("Predict")
 
     if clicked:
-        user_df = pd.DataFrame([{
-            "TCGA_DESC":                                tcga_desc,
-            "GDSC Tissue descriptor 1":                 tissue_1,
-            "GDSC Tissue descriptor 2":                 tissue_2,
-            "Cancer Type (matching TCGA label)":        cancer_type,
-            "TARGET":                                   target,
-            "TARGET_PATHWAY":                           pathway,
-            "Screen Medium":                            screen_med,
-            "Growth Properties":                        growth,
-            "Microsatellite instability Status (MSI)":  msi
-        }])
+        with st.spinner(f"Loading {model_name} and predicting..."):
+            if task == "Classification":
+                model = load_cls_model(model_name)
+            else:
+                model = load_reg_model(model_name)
 
-        be = BinaryEncoder(cols=nominal_columns)
-        be.fit(df[nominal_columns])
-        user_encoded = be.transform(user_df).to_numpy()
+            user_df = pd.DataFrame([{
+                "TCGA_DESC":                                tcga_desc,
+                "GDSC Tissue descriptor 1":                 tissue_1,
+                "GDSC Tissue descriptor 2":                 tissue_2,
+                "Cancer Type (matching TCGA label)":        cancer_type,
+                "TARGET":                                   target,
+                "TARGET_PATHWAY":                           pathway,
+                "Screen Medium":                            screen_med,
+                "Growth Properties":                        growth,
+                "Microsatellite instability Status (MSI)":  msi
+            }])
 
-        prediction = model.predict(user_encoded)
+            be = BinaryEncoder(cols=nominal_columns)
+            be.fit(df[nominal_columns])
+            user_encoded = be.transform(user_df).to_numpy()
+            prediction   = model.predict(user_encoded)
 
         st.divider()
 
