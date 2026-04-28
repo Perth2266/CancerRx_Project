@@ -87,7 +87,7 @@ st.sidebar.title("CancerRx Predictor")
 page = st.sidebar.radio("Navigate", [
     "CancerRx",
     "Data Explorer",
-    "Model Comparison",
+    # "Model Comparison",
     "Prediction"
 ])
 
@@ -286,66 +286,66 @@ elif page == "Data Explorer":
 # ─────────────────────────────────────────────
 # PAGE 3: MODEL COMPARISON
 # ─────────────────────────────────────────────
-elif page == "Model Comparison":
-    st.title("Model Comparison")
+# elif page == "Model Comparison":
+#     st.title("Model Comparison")
 
-    task = st.radio("Task", ["Classification", "Regression"], horizontal=True)
+#     task = st.radio("Task", ["Classification", "Regression"], horizontal=True)
 
-    if task == "Classification":
-        from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
+#     if task == "Classification":
+#         from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
 
-        X_test, y_test = get_cls_splits()
-        results = []
+#         X_test, y_test = get_cls_splits()
+#         results = []
 
-        for name in CLS_MODEL_NAMES:
-            with st.spinner(f"Evaluating {name}..."):
-                model  = load_cls_model(name)
-                y_pred = model.predict(X_test)
-                acc    = round(accuracy_score(y_test, y_pred), 4)
-                recall = round(recall_score(y_test, y_pred), 4)
-                try:
-                    auc = round(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]), 4)
-                except:
-                    auc = "N/A"
-                results.append({"Model": name, "Accuracy": acc, "Recall": recall, "ROC AUC": auc})
+#         for name in CLS_MODEL_NAMES:
+#             with st.spinner(f"Evaluating {name}..."):
+#                 model  = load_cls_model(name)
+#                 y_pred = model.predict(X_test)
+#                 acc    = round(accuracy_score(y_test, y_pred), 4)
+#                 recall = round(recall_score(y_test, y_pred), 4)
+#                 try:
+#                     auc = round(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]), 4)
+#                 except:
+#                     auc = "N/A"
+#                 results.append({"Model": name, "Accuracy": acc, "Recall": recall, "ROC AUC": auc})
 
-        results_df = pd.DataFrame(results).sort_values("Recall", ascending=False)
-        st.dataframe(results_df)
-        best = results_df.iloc[0]["Model"]
-        st.success(f"Best Model: {best} (highest Recall)")
+#         results_df = pd.DataFrame(results).sort_values("Recall", ascending=False)
+#         st.dataframe(results_df)
+#         best = results_df.iloc[0]["Model"]
+#         st.success(f"Best Model: {best} (highest Recall)")
 
-        fig, ax = plt.subplots()
-        ax.bar(results_df["Model"], results_df["Recall"], color="steelblue")
-        ax.set_ylabel("Recall")
-        ax.set_title("Model Comparison: Recall")
-        plt.xticks(rotation=15)
-        st.pyplot(fig)
+#         fig, ax = plt.subplots()
+#         ax.bar(results_df["Model"], results_df["Recall"], color="steelblue")
+#         ax.set_ylabel("Recall")
+#         ax.set_title("Model Comparison: Recall")
+#         plt.xticks(rotation=15)
+#         st.pyplot(fig)
 
-    else:
-        from sklearn.metrics import mean_squared_error, r2_score
+#     else:
+#         from sklearn.metrics import mean_squared_error, r2_score
 
-        X_test, y_test = get_reg_splits()
-        results = []
+#         X_test, y_test = get_reg_splits()
+#         results = []
 
-        for name in REG_MODEL_NAMES:
-            with st.spinner(f"Evaluating {name}..."):
-                model  = load_reg_model(name)
-                y_pred = model.predict(X_test)
-                mse    = round(mean_squared_error(y_test, y_pred), 4)
-                r2     = round(r2_score(y_test, y_pred), 4)
-                results.append({"Model": name, "MSE": mse, "R²": r2})
+#         for name in REG_MODEL_NAMES:
+#             with st.spinner(f"Evaluating {name}..."):
+#                 model  = load_reg_model(name)
+#                 y_pred = model.predict(X_test)
+#                 mse    = round(mean_squared_error(y_test, y_pred), 4)
+#                 r2     = round(r2_score(y_test, y_pred), 4)
+#                 results.append({"Model": name, "MSE": mse, "R²": r2})
 
-        results_df = pd.DataFrame(results).sort_values("R²", ascending=False)
-        st.dataframe(results_df)
-        best = results_df.iloc[0]["Model"]
-        st.success(f"Best Model: {best} (highest R²)")
+#         results_df = pd.DataFrame(results).sort_values("R²", ascending=False)
+#         st.dataframe(results_df)
+#         best = results_df.iloc[0]["Model"]
+#         st.success(f"Best Model: {best} (highest R²)")
 
-        fig, ax = plt.subplots()
-        ax.bar(results_df["Model"], results_df["R²"], color="steelblue")
-        ax.set_ylabel("R²")
-        ax.set_title("Model Comparison: R²")
-        plt.xticks(rotation=15)
-        st.pyplot(fig)
+#         fig, ax = plt.subplots()
+#         ax.bar(results_df["Model"], results_df["R²"], color="steelblue")
+#         ax.set_ylabel("R²")
+#         ax.set_title("Model Comparison: R²")
+#         plt.xticks(rotation=15)
+#         st.pyplot(fig)
 
 # ─────────────────────────────────────────────
 # PAGE 4: PREDICTION
